@@ -168,10 +168,116 @@ def get_scaled_fov_and_altitude(scanner: Scanner, body: Body)\
 
 
 class Solver:
-    def __init__(self, scanner, body):
-        self.__scanner = scanner
-        self.__body = body
+    def __init__(self, scanner: Scanner, body: Body):
+        self.__scanner: Scanner = scanner
+        self.__body: Body = body
 
         fov, fov_alt = get_scaled_fov_and_altitude(scanner, body)
-        self.fov = fov
-        self.fov_alt = fov_alt
+        self.fov: float = fov
+        self.fov_alt: float = fov_alt
+        self.k: float = 180 * self.fov_alt / self.fov
+
+    def get_sma(self, p: int, q: int) -> float:
+        """
+        Finds the semi-major axis required for an orbit with period (p/q)T
+        where T is the sidereal rotation period of the body being orbited.
+        """
+        return (p/q)**(2/3) * self.__body.geo_radius
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-= EQUATION STUFF =-=-=-=-=-=-=-=-=-=-=-=-=-=-= #
+
+    def _s(self, p: float, q: float, x: float, y: float) -> float:
+        """S component of inequality (some rearrangement done)"""
+        return sqrt(q**2 * (1-x*y)**4 + p**2 * (1-y*y)**3)
+
+    def _ds_dx(self, p: int, q: int, x: float, y: float) -> float:
+        """partial derivative of S with respect to x"""
+        s = self._s(p, q, x, y)
+        return -2 * (q**2 * y * (1-x*y)**3) / s
+
+    def _ds_dy(self, p: int, q: int, x: float, y: float):
+        """partial derivative of S with respect to y"""
+        s = self._s(p, q, x, y)
+        return -(2 * q**2 * x * (1-x*y)**3 + 3 * p**2 * y * (1-y*y)**2) / s
+
+    def _f(self, p: int, q: int, x: float, y: float) -> float:
+        """F component of inequality (some rearrangement done)"""
+        return (1-y*y)*self.get_sma(p, q) - (1-x*y)*self.__body.radius
+
+    def _df_dx(self, p: int, q: int, x: float, y: float) -> float:
+        """partial derivative of F with respect to x"""
+        return self.__body.radius * y
+
+    def _df_dy(self, p: int, q: int, x: float, y: float) -> float:
+        """partial derivative of F with respect to y"""
+        return x*self.__body.radius - 2*y*self.get_sma(p, q)
+
+    def _m(self, p: int, q: int, x: float, y: float) -> float:
+        """M component of inequality (some rearrangement done)"""
+        return self.k * x * (1 - x*y) ** 3
+
+    def _dm_dx(self, p: int, q: int, x: float, y: float) -> float:
+        """partial derivative of M with respect to x"""
+        return self.k * (1 - 4*x*y) * (1 - x*y) ** 2
+
+    def _dm_dy(self, p: int, q: int, x: float, y: float) -> float:
+        """partial derivative of M with respect to y"""
+        return -3 * self.k * x**2 * (1 - x*y)**2
+
+    def _inequality_value(self, p: int, q: int, x: float, y: float) -> float:
+        """Calculates difference between the two sides of the inequality"""
+
+        s = self._s(p, q, x, y)
+        f = self._f(p, q, x, y)
+        m = self._m(p, q, x, y)
+
+        return s*f - m
+
+    def _inequality_d_dx(self, p: int, q: int, x: float, y: float) -> float:
+        """gradient of inequality in x direction"""
+        s = self._s(p, q, x, y)
+        ds_dx = self._ds_dx(p, q, x, y)
+
+        f = self._f(p, q, x, y)
+        df_dx = self._df_dx(p, q, x, y)
+
+        dm_dx = self._dm_dx(p, q, x, y)
+
+        return s*df_dx + f*ds_dx - dm_dx
+
+    def _inequality_d_dy(self, p: int, q: int, x: float, y: float) -> float:
+        """gradient of inequality in y direction"""
+        s = self._s(p, q, x, y)
+        ds_dy = self._ds_dy(p, q, x, y)
+
+        f = self._f(p, q, x, y)
+        df_dy = self._df_dy(p, q, x, y)
+
+        dm_dy = self._dm_dy(p, q, x, y)
+
+        return s*df_dy + f*ds_dy - dm_dy
+
+    def _fixed_track_value(self, p: int, q: int, x: float, y: float) -> float:
+        """
+        Variant of inequality with fov fixed at max. Ensures coverage above
+        'best altitude' of scanner as other inequality will over scale.
+        """
+        s = self._s(p, q, x, y)
+        m = self._m(p, q, x, y) / self.fov_alt  # no altitude scaling
+        return s - m
+
+    def _fixed_track_d_dx(self, p: int, q: int, x: float, y: float) -> float:
+        """x gradient of alternative inequality"""
+        ds_dx = self._ds_dx(p, q, x, y)
+        dm_dx = self._dm_dx(p, q, x, y) / self.fov_alt  # no altitude scaling
+
+        return ds_dx - dm_dx
+
+    def _fixed_track_d_dy(self, p: int, q: int, x: float, y: float) -> float:
+        """y gradient of alternative inequality"""
+        ds_dy = self._ds_dy(p, q, x, y)
+        dm_dy = self._dm_dy(p, q, x, y) / self.fov_alt  # no altitude scaling
+
+        return ds_dy - dm_dy
+
+# -=-=-=-=-=-=-=-=-=-=-=-=--=-=- SOLVER STUFF -=-=-=-=-=-=-=-=-=-=-=-=--=-=-= #
