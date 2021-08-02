@@ -72,9 +72,11 @@ this way for consistency, but it is important to know when trying to understand
  simpler, but may under-estimate the gains - especially when using higher fov
                          scanners on smaller planets.
 """
-from collections.abc import Iterator
+from enum import IntEnum
+from collections.abc import Iterator, Callable
 from dataclasses import dataclass, field
 from math import pi, sqrt, inf, gcd, ceil
+from typing import Union
 
 
 @dataclass
@@ -138,7 +140,14 @@ class SolutionParams:
     eccentricity_max: float
 
 
-FOV_MAX = 20  # fov capped in SCANSat to 20° after scaling
+class Direction(IntEnum):
+    UP = 1
+    ANY = 0
+    DOWN = -1
+
+
+FOV_MAX: float = 20  # fov capped in SCANSat to 20° after scaling
+TOLERANCE: float = 1e-5
 
 
 def coprimes_of(n: int, start: int = 1, end: int = inf) -> Iterator[int]:
@@ -165,6 +174,58 @@ def get_scaled_fov_and_altitude(scanner: Scanner, body: Body)\
         fov = FOV_MAX
 
     return fov, alt
+
+
+def find_root_near(fx: Callable[[float], float],
+                   df_dx: Callable[[float], float],
+                   x0: float,
+                   direction: Direction,
+                   max_dx: float = 1e-2) -> Union[float, None]:
+    """
+    Finds a root fx(x) = 0 near x0. Only searches in the direction specified.
+
+    Uses a modified version of the Newtonian root finding algorithm to limit
+    step size and force searching in a set direction from the starting value.
+
+    Limit to step size was required to prevent overshoot taking it too far past
+    the intended root and out of the domain.
+
+
+    :param fx: the function to find a root in
+    :param df_dx: derivative of f(x)
+    :param x0: starting value
+    :param direction: direction to search in
+    :param max_dx: maximum single step change in x
+    :return: the 'x' value of the root
+    """
+
+    y0 = fx(x0)
+
+    _x, x = inf, x0
+    while abs(_x - x) > TOLERANCE:
+        _x = x  # save old value
+
+        y = fx(x)
+        dy = df_dx(x)
+        r = y/dy
+
+        # limit distance moved
+        if abs(r) > max_dx:
+            r = max_dx if r > 0 else -max_dx
+
+        # if y has flipped (+ -> - or - -> +) change direction: passed root
+        sign = int(direction) if y0*y > 0 else -int(direction)
+
+        # ensure moving in correct direction
+        if r*sign < 0:
+            r = -r
+        x += r
+
+        # Any x or y we pass in is limited between 0 and 1. If we exceed these
+        # we risk errors. Should never happen unless there is no root.
+        if not (0 <= x <= 1):
+            return None
+    return x
 
 
 class Solver:
