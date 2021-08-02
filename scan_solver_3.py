@@ -35,6 +35,7 @@ rotation period of the body being orbited, and checking for eccentricity values
            inequality is true for all values of x (between 0 and 1):
 
                                    S*F >= M
+
                                      where
 
                   S = sqrt(1 + (p/q)^2 (1-e^2)^3 / (1-ex)^4)
@@ -46,7 +47,7 @@ rotation period of the body being orbited, and checking for eccentricity values
 
              is the field of view at each point in the orbit, and
 
-                                   M = 180x
+                                 M = 180 x / q
 
                 is the required field of view at each latitude.
 
