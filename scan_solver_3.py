@@ -131,15 +131,15 @@ class SolutionParams:
     eccentricity_max: float
 
 
+FOV_MAX = 20  # fov capped in SCANSat to 20° after scaling
+
+
 def coprimes_of(n: int, start: int = 1, end: int = inf):
     k = start
     while k <= end:
         if gcd(n, k) == 1:
             yield k
         k += 1
-
-
-FOV_MAX = 20  # fov capped in SCANSat to 20° after scaling
 
 
 def get_scaled_fov_and_altitude(scanner: Scanner, body: Body) -> tuple[float, float]:
