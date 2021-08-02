@@ -142,7 +142,8 @@ def coprimes_of(n: int, start: int = 1, end: int = inf):
         k += 1
 
 
-def get_scaled_fov_and_altitude(scanner: Scanner, body: Body) -> tuple[float, float]:
+def get_scaled_fov_and_altitude(scanner: Scanner, body: Body)\
+        -> tuple[float, float]:
     fov = scanner.fov
     alt = scanner.altitude_best
 
