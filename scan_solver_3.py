@@ -55,3 +55,22 @@ class SolutionParams:
     eccentricity_min: float
     eccentricity_max: float
 
+
+FOV_MAX = 20  # fov capped in SCANSat to 20° after scaling
+
+
+def get_scaled_fov_and_altitude(scanner: Scanner, body: Body) -> tuple[float, float]:
+    fov = scanner.fov
+    alt = scanner.altitude_best
+
+    r = body.radius
+    r_kerbin = BODIES["kerbin"].radius
+
+    if r < r_kerbin:  # fov ony scales for bodies smaller than kerbin
+        fov *= sqrt(r_kerbin / r)
+
+    if fov > FOV_MAX:
+        alt *= FOV_MAX / fov  # lower altitude to where fov = FOV_MAX
+        fov = FOV_MAX
+
+    return fov, alt
