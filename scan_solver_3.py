@@ -73,7 +73,7 @@ this way for consistency, but it is important to know when trying to understand
 """
 
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import pi, sqrt, inf, gcd, ceil
 
 
@@ -84,6 +84,13 @@ class Body:
     standard_gravity: float
     safe_altitude: float
     soi_radius: float
+
+    geo_radius: float = field(init=False)
+
+    def __post_init__(self):
+        mu = self.standard_gravity
+        t = self.rotation_period
+        self.geo_radius = (mu * t**2 / (4 * pi**2)) ** (1/3)
 
 
 BODIES = {
