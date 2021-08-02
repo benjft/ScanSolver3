@@ -1,7 +1,7 @@
 #!/user/bin/env python3.9
 
 """
-################################### LICENCE ###################################
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- LICENCE -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 Copyright © 2021 Benedict Thompson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,55 +21,55 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-###############################################################################
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-Scan-Solver 3.0
+                                Scan-Solver 3.0
 
-This program is designed to find the most efficient (time-wise) orbit for
+   This program is designed to find the most efficient (time-wise) orbit for
 completing a surface scan with SCAN Sat. This is done by searching orbits with
-a period p/q * T, where 'p/q' is a reduced fraction and 'T' is the sidereal
+  a period p/q * T, where 'p/q' is a reduced fraction and 'T' is the sidereal
 rotation period of the body being orbited, and checking for eccentricity values
-that provide complete coverage at all latitudes.
+               that provide complete coverage at all latitudes.
 
-This is done by finding values of e (between 0 and 1) for which the following
-inequality is true for all values of x (between 0 and 1):
+ This is done by finding values of e (between 0 and 1) for which the following
+           inequality is true for all values of x (between 0 and 1):
 
                                    S*F >= M
-where
+                                     where
 
                   S = sqrt(1 + (p/q)^2 (1-e^2)^3 / (1-ex)^4)
 
-is the ratio of the angular speed relative the the surface to the orbital
-angular speed,
+   is the ratio of the angular speed relative the the surface to the orbital
+                                angular speed,
 
                          F = f(a(1-e^2)/(1-ex) - R)/A
 
-is the field of view at each point in the orbit, and
+             is the field of view at each point in the orbit, and
 
                                    M = 180x
 
-is the required field of view at each latitude.
+                is the required field of view at each latitude.
 
-'e' is the orbital eccentricity
-'x' is cos of the latitude the orbit is over
-'f' is the base field of view of the scanner (in degrees)
-'a' is the semi-major axis = cube_root((p/q)^2 μ T^2 / (4 π^2))
-    'μ' is the standard gravitational parameter for the body = G*m
-'A' is the "best altitude" of the scanner
+                        'e' is the orbital eccentricity
+                 'x' is cos of the latitude the orbit is over
+           'f' is the base field of view of the scanner (in degrees)
+        'a' is the semi-major axis = cube_root((p/q)^2 μ T^2 / (4 π^2))
+        'μ' is the standard gravitational parameter for the body = G*m
+                   'A' is the "best altitude" of the scanner
 
-Note that 'field of view' as used in SCAN Sat is actually the track width
-scanned, not the angle of a cone projected from the scanner. I will use it in
+   Note that 'field of view' as used in SCAN Sat is actually the track width
+ scanned, not the angle of a cone projected from the scanner. I will use it in
 this way for consistency, but it is important to know when trying to understand
-the function of each part.
+                          the function of each part.
 
-Version 1 solved circular orbits by checking that q * fov >= 180
-Version 2 solved F >= M for elliptical orbits
+       Version 1 solved circular orbits by checking that q * fov >= 180
+                 Version 2 solved F >= M for elliptical orbits
 
-The surface component, S, added for v3.0 improves the scan times
-that can be achieved by realising that the body rotates under the orbit,
-increasing the width swept at each point. The method used keeps the maths
-simpler, but may under-estimate the gains - especially when using higher fov
-scanners on smaller planets.
+       The surface component, S, added for v3.0 improves the scan times
+   that can be achieved by realising that the body rotates under the orbit,
+   increasing the width swept at each point. The method used keeps the maths
+ simpler, but may under-estimate the gains - especially when using higher fov
+                         scanners on smaller planets.
 """
 
 
