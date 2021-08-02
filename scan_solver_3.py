@@ -71,8 +71,7 @@ this way for consistency, but it is important to know when trying to understand
  simpler, but may under-estimate the gains - especially when using higher fov
                          scanners on smaller planets.
 """
-
-
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from math import pi, sqrt, inf, gcd, ceil
 
@@ -141,7 +140,7 @@ class SolutionParams:
 FOV_MAX = 20  # fov capped in SCANSat to 20° after scaling
 
 
-def coprimes_of(n: int, start: int = 1, end: int = inf):
+def coprimes_of(n: int, start: int = 1, end: int = inf) -> Iterator[int]:
     k = start
     while k <= end:
         if gcd(n, k) == 1:
