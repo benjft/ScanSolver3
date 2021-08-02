@@ -158,3 +158,13 @@ def get_scaled_fov_and_altitude(scanner: Scanner, body: Body)\
         fov = FOV_MAX
 
     return fov, alt
+
+
+class Solver:
+    def __init__(self, scanner, body):
+        self.__scanner = scanner
+        self.__body = body
+
+        fov, fov_alt = get_scaled_fov_and_altitude(scanner, body)
+        self.fov = fov
+        self.fov_alt = fov_alt
