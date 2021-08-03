@@ -251,9 +251,7 @@ def find_root_between(fx: Callable[[float], float], x0: float, x1: float)\
     """
 
     y0, y1 = fx(x0), fx(x1)
-    if y1 < 0 < y0:  # wrong order, swap
-        x0, y0, x1, y1 = x1, y1, x0, y0
-    elif VERBOSE and y0*y1 > 0:
+    if VERBOSE and y0*y1 > 0:
         print("WARN: no guaranteed root between x0 and x1.")
 
     while abs(x0 - x1) > TOLERANCE:
