@@ -150,7 +150,7 @@ TOP = 1
 
 FOV_MAX: float = 20  # fov capped in SCANSat to 20° after scaling
 TOLERANCE: float = 1e-5
-VERBOSE = True
+VERBOSE = False
 
 
 def coprimes_of(n: int, start: int = 1, end: int = inf) -> Iterator[int]:
