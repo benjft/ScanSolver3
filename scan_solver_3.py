@@ -72,7 +72,6 @@ this way for consistency, but it is important to know when trying to understand
  simpler, but may under-estimate the gains - especially when using higher fov
                          scanners on smaller planets.
 """
-from enum import IntEnum
 from collections.abc import Iterator, Callable
 from dataclasses import dataclass, field
 from math import pi, sqrt, inf, gcd, ceil
