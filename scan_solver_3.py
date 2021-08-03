@@ -291,7 +291,7 @@ def find_limit(fxy: Callable[[float, float], float],
             return y
         x0 = x
     else:
-        y = find_root_between(lambda _y: fxy(x, _y), x, 1 - x)
+        y = find_root_between(lambda _y: fxy(x, _y), side, 1 - side)
 
         dx = sign * df_dx(x, y)
         if dx < 0:   # implies down slope leaves domain, must be max
