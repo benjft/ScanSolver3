@@ -323,6 +323,9 @@ class Solver:
         self.__scanner: Scanner = scanner
         self.__body: Body = body
 
+        self.min_sma = body.radius + max(scanner.altitude_min,
+                                         body.safe_altitude)
+
         fov, fov_alt = get_scaled_fov_and_altitude(scanner, body)
         self.fov: float = fov
         self.fov_alt: float = fov_alt
