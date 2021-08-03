@@ -148,6 +148,7 @@ class Direction(IntEnum):
 
 FOV_MAX: float = 20  # fov capped in SCANSat to 20° after scaling
 TOLERANCE: float = 1e-5
+VERBOSE = True
 
 
 def coprimes_of(n: int, start: int = 1, end: int = inf) -> Iterator[int]:
@@ -226,6 +227,51 @@ def find_root_near(fx: Callable[[float], float],
         if not (0 <= x <= 1):
             return None
     return x
+
+
+def find_root_between(fx: Callable[[float], float], x0: float, x1: float)\
+        -> float:
+    """
+    Finds a root between the specified starting values.
+
+    Uses a bisection algorithm to quickly find a root between the two values.
+    If multiple roots exist any one of them may be found.
+
+    Assumes that f(x0) < 0 and f(x1) > 0 so should find roots that are
+    increasing when moving from x0 to x1.
+    x0 does not need to be smaller than x1 for this reason. If there are no
+    roots, it will more towards closest value to 0, but not guaranteed.
+
+    :param fx: the function to find roots in
+    :param x0: value where f(x) < 0
+    :param x1: value were f(x) > 0
+    :return: x coordinate of found root
+    """
+
+    y0, y1 = fx(x0), fx(x1)
+    if y1 < 0 < y0:  # wrong order, swap
+        x0, y0, x1, y1 = x1, y1, x0, y0
+    elif VERBOSE and y0*y1 > 0:
+        print("WARN: no guaranteed root between x0 and x1.")
+
+    while abs(x0 - x1) > TOLERANCE:
+        x = (x0 + x1) / 2
+        y = fx(x)
+
+        if y < 0:
+            x0 = x
+            y0 = y
+        else:
+            x1 = x
+            y1 = y
+
+    if y0*y1 > 0:  # both same sign -> no root found
+        if VERBOSE:
+            print("WARN: No root found")
+        if abs(y0) < abs(y1):  # return x with smallest y (assumed closest)
+            return x0
+        return x1
+    return (x0 + x1) / 2
 
 
 class Solver:
