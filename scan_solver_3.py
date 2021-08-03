@@ -139,11 +139,8 @@ class SolutionParams:
     eccentricity_min: float
     eccentricity_max: float
 
-
-class Direction(IntEnum):
-    UP = 1
-    ANY = 0
-    DOWN = -1
+BOTTOM = 0
+TOP = 1
 
 
 FOV_MAX: float = 20  # fov capped in SCANSat to 20° after scaling
@@ -180,7 +177,7 @@ def get_scaled_fov_and_altitude(scanner: Scanner, body: Body)\
 def find_root_near(fx: Callable[[float], float],
                    df_dx: Callable[[float], float],
                    x0: float,
-                   direction: Direction,
+                   direction: int,
                    max_dx: float = 1e-2) -> Union[float, None]:
     """
     Finds a root fx(x) = 0 near x0. Only searches in the direction specified.
@@ -272,6 +269,50 @@ def find_root_between(fx: Callable[[float], float], x0: float, x1: float)\
             return x0
         return x1
     return (x0 + x1) / 2
+
+
+def find_limit(fxy: Callable[[float, float], float],
+               df_dx: Callable[[float, float], float],
+               df_dy: Callable[[float, float], float],
+               side: int) -> Union[float, None]:
+    sign = 1 - 2*side  # 1 if bottom, -1 if top
+
+    x = 1 - side
+    x0, x1 = x, 1-x
+    y = side
+    if fxy(x, y) > 0:
+        y = side
+        x = find_root_near(lambda _x: fxy(_x, y),
+                           lambda _x: df_dx(_x, y), 1-side, -sign)
+        if x is None:  # positive and no root in x -> y is valid
+            return y
+        x0 = x
+    else:
+        y = find_root_between(lambda _y: fxy(x, _y), x, 1 - x)
+
+        dx = sign * df_dx(x, y)
+        if dx < 0:   # implies down slope leaves domain, must be max
+            return y
+
+    while abs(x0 - x1) > TOLERANCE:
+        dx = sign * df_dx(x, y)
+        if dx > 0:
+            x0 = x
+            x1 = find_root_between(lambda _x: fxy(_x, y), x0, x1)
+        else:
+            x1 = x
+            x0 = find_root_between(lambda _x: fxy(_x, y), x1, x0)
+
+        x = (x0 + x1) / 2
+        z = fxy(x, y)
+        y = find_root_near(lambda _y: fxy(x, _y),
+                           lambda _y: df_dy(x, _y),
+                           y,
+                           sign if z < 0 else -sign)
+
+        if y is None:  # no roots at this y value or error
+            return None
+    return y
 
 
 class Solver:
