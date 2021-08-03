@@ -410,20 +410,20 @@ class Solver:
         'best altitude' of scanner as other inequality will over scale.
         """
         s = self._s(p, q, x, y)
-        m = self._m(p, q, x, y) / self.fov_alt  # no altitude scaling
+        m = (180/self.fov) * x * (1 - x*y)**2  # no altitude scaling
         return s - m
 
     def _fixed_track_d_dx(self, p: int, q: int, x: float, y: float) -> float:
         """x gradient of alternative inequality"""
         ds_dx = self._ds_dx(p, q, x, y)
-        dm_dx = self._dm_dx(p, q, x, y) / self.fov_alt  # no altitude scaling
+        dm_dx = (180/self.fov) * (1 - x*y) * (1 - 3*x*y)  # no altitude scaling
 
         return ds_dx - dm_dx
 
     def _fixed_track_d_dy(self, p: int, q: int, x: float, y: float) -> float:
         """y gradient of alternative inequality"""
         ds_dy = self._ds_dy(p, q, x, y)
-        dm_dy = self._dm_dy(p, q, x, y) / self.fov_alt  # no altitude scaling
+        dm_dy = -2 * (180/self.fov) * x**2 * (1 - x*y)  # no altitude scaling
 
         return ds_dy - dm_dy
 
