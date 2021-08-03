@@ -428,3 +428,135 @@ class Solver:
         return ds_dy - dm_dy
 
 # -=-=-=-=-=-=-=-=-=-=-=-=--=-=- SOLVER STUFF -=-=-=-=-=-=-=-=-=-=-=-=--=-=-= #
+
+    def check_free_track(self, p: int, q: int)\
+            -> Optional[tuple[float, float]]:
+        a = self.__body.get_sma(p, q)
+        if a < self.min_sma:
+            return None
+
+        e_min = find_limit(lambda x, y: self._inequality_value(p, q, x, y),
+                           lambda x, y: self._inequality_d_dx(p, q, x, y),
+                           lambda x, y: self._inequality_d_dy(p, q, x, y),
+                           BOTTOM)
+
+        if e_min is None:
+            return None
+
+        e_max = find_limit(lambda x, y: self._inequality_value(p, q, x, y),
+                           lambda x, y: self._inequality_d_dx(p, q, x, y),
+                           lambda x, y: self._inequality_d_dy(p, q, x, y),
+                           TOP)
+        if e_max is None or e_max < e_min:
+            return None
+
+        return e_min, e_max
+
+    def check_fixed_track(self, p: int, q: int)\
+            -> Optional[tuple[float, float]]:
+        a = self.__body.get_sma(p, q)
+        if a < self.min_sma:
+            return None
+
+        e_min = find_limit(lambda x, y: self._fixed_track_value(p, q, x, y),
+                           lambda x, y: self._fixed_track_d_dx(p, q, x, y),
+                           lambda x, y: self._fixed_track_d_dy(p, q, x, y),
+                           BOTTOM)
+
+        if e_min is None:
+            return None
+
+        e_max = find_limit(lambda x, y: self._fixed_track_value(p, q, x, y),
+                           lambda x, y: self._fixed_track_d_dx(p, q, x, y),
+                           lambda x, y: self._fixed_track_d_dy(p, q, x, y),
+                           TOP)
+
+        if e_max is None or e_max < e_min:
+            return None
+
+        return e_min, e_max
+
+    def get_hard_limit(self, p: int, q: int) -> Optional[tuple[float, float]]:
+        body = self.__body
+        scanner = self.__scanner
+
+        a = body.get_sma(p, q)
+        r = body.radius
+
+        if a > body.soi_radius or a > (scanner.altitude_max + r):
+            return None
+
+        e_safe = 1 - (r + body.safe_altitude) / a
+        e_pole = sqrt(1 - (r + scanner.altitude_min) / a)
+        e_apo = (r + scanner.altitude_max) / a - 1
+        e_soi = body.soi_radius / a - 1
+
+        return 0, min(e_safe, e_pole, e_apo, e_soi)
+
+
+def find_fastest(body: Body, *scanners: Scanner):
+    solvers = [Solver(scanner, body) for scanner in scanners]
+
+    limit = 360
+    if (min_fov := min(solver.fov for solver in solvers)) < 1:
+        limit = ceil(limit / min_fov)
+
+    for p in range(1, limit+1):
+        solutions = []
+        for q in coprimes_of(p):
+            failed = False
+            e_min, e_max = 0, 1
+            for solver in solvers:
+                e_limits = solver.check_free_track(p, q)
+                if e_limits is None:
+                    failed = True
+                    break
+                e_min = max(e_limits[0], e_min)
+                e_max = min(e_limits[1], e_max)
+                if e_min > e_max:
+                    failed = True
+                    break
+            if failed:
+                break
+            solutions.append(SolutionParams(p, q, e_min, e_max))
+        for i, solution in enumerate(solutions):
+            e_min, e_max = solution.e_min, solution.e_max
+            q = solution.q
+            failed = False
+            for solver in solvers:
+                e_hard = solver.get_hard_limit(p, q)
+                if e_hard is None:
+                    failed = True
+                    break
+                e_min = max(e_min, e_hard[0])
+                e_max = min(e_max, e_hard[1])
+
+                e_limits = solver.check_fixed_track(p, q)
+                if e_limits is None:
+                    failed = True
+                    break
+
+                e_min = max(e_limits[0], e_min)
+                e_max = min(e_limits[1], e_max)
+                if e_min > e_max:
+                    failed = True
+                    break
+
+            if failed:
+                solutions[i] = None
+            else:
+                solution.e_min, solution.e_max = e_min, e_max
+        solutions = [s for s in solutions if s is not None]
+        if solutions:
+            return solutions
+
+
+def main():
+    scanner = Scanner(4, 250_000, 500_000, 1_000_000)
+    solutions = find_fastest(BODIES["minmus"], scanner)
+
+    print(*solutions, sep='\n')
+
+
+if __name__ == "__main__":
+    main()
