@@ -94,6 +94,13 @@ class Body:
         t = self.rotation_period
         self.geo_radius = (mu * t**2 / (4 * pi**2)) ** (1/3)
 
+    def get_sma(self, p: int, q: int) -> float:
+        """
+        Finds the semi-major axis required for an orbit with period (p/q)T
+        where T is the sidereal rotation period of the body being orbited.
+        """
+        return (p/q)**(2/3) * self.geo_radius
+
 
 BODIES = {
     "kerbol": Body(261_600_000, 432_000, 1.1723328e18, 600_000, inf),
@@ -325,13 +332,6 @@ class Solver:
         self.fov_alt: float = fov_alt
         self.k: float = 180 * self.fov_alt / self.fov
 
-    def get_sma(self, p: int, q: int) -> float:
-        """
-        Finds the semi-major axis required for an orbit with period (p/q)T
-        where T is the sidereal rotation period of the body being orbited.
-        """
-        return (p/q)**(2/3) * self.__body.geo_radius
-
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-= EQUATION STUFF =-=-=-=-=-=-=-=-=-=-=-=-=-=-= #
 
     def _s(self, p: float, q: float, x: float, y: float) -> float:
@@ -350,7 +350,7 @@ class Solver:
 
     def _f(self, p: int, q: int, x: float, y: float) -> float:
         """F component of inequality (some rearrangement done)"""
-        return (1-y*y)*self.get_sma(p, q) - (1-x*y)*self.__body.radius
+        return (1-y*y)*self.__body.get_sma(p, q) - (1-x*y)*self.__body.radius
 
     def _df_dx(self, p: int, q: int, x: float, y: float) -> float:
         """partial derivative of F with respect to x"""
@@ -358,7 +358,7 @@ class Solver:
 
     def _df_dy(self, p: int, q: int, x: float, y: float) -> float:
         """partial derivative of F with respect to y"""
-        return x*self.__body.radius - 2*y*self.get_sma(p, q)
+        return x*self.__body.radius - 2*y*self.__body.get_sma(p, q)
 
     def _m(self, p: int, q: int, x: float, y: float) -> float:
         """M component of inequality (some rearrangement done)"""
