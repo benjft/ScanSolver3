@@ -75,7 +75,7 @@ this way for consistency, but it is important to know when trying to understand
 from collections.abc import Iterator, Callable
 from dataclasses import dataclass, field
 from math import pi, sqrt, inf, gcd, ceil
-from typing import Union
+from typing import Optional
 
 
 @dataclass
@@ -184,7 +184,7 @@ def find_root_near(fx: Callable[[float], float],
                    df_dx: Callable[[float], float],
                    x0: float,
                    direction: int,
-                   max_dx: float = 1e-2) -> Union[float, None]:
+                   max_dx: float = 1e-2) -> Optional[float]:
     """
     Finds a root fx(x) = 0 near x0. Only searches in the direction specified.
 
@@ -280,7 +280,7 @@ def find_root_between(fx: Callable[[float], float], x0: float, x1: float)\
 def find_limit(fxy: Callable[[float, float], float],
                df_dx: Callable[[float, float], float],
                df_dy: Callable[[float, float], float],
-               side: int) -> Union[float, None]:
+               side: int) -> Optional[float]:
     sign = 1 - 2*side  # 1 if bottom, -1 if top
 
     x = 1 - side
