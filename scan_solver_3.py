@@ -141,9 +141,8 @@ class Scanner:
 class SolutionParams:
     p: int
     q: int
-    semi_major_axis: float
-    eccentricity_min: float
-    eccentricity_max: float
+    e_min: float
+    e_max: float
 
 BOTTOM = 0
 TOP = 1
