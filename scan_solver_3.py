@@ -80,6 +80,11 @@ from typing import Optional
 
 @dataclass
 class Body:
+    """
+    class for holding information about celestial bodies (planets, moons, etc)
+    also includes method for calculating the semi-major axis of an orbit with
+    period p/q T where T is the period of a synchronous orbit
+    """
     radius: float
     rotation_period: float
     standard_gravity: float
@@ -101,6 +106,8 @@ class Body:
         return (p/q)**(2/3) * self.geo_radius
 
 
+# information on planets in the base game and outer-planets mod (prefixed opm_)
+# data is from wikis so may not be 100% accurate.
 BODIES = {
     "kerbol": Body(261_600_000, 432_000, 1.1723328e18, 600_000, inf),
 
@@ -125,28 +132,71 @@ BODIES = {
     "bop": Body(65_000, 544_507.43, 2.4868349e9, 25_000, 1_221_060.9),
     "pol": Body(44_000, 901_902.62, 7.2170208e8, 5_000, 1_042_138.9),
 
-    "eeloo": Body(210_000, 19_460, 7.4410815e10, 5_000, 1.1908294e8)
+    "eeloo": Body(210_000, 19_460, 7.4410815e10, 5_000, 119_082_940),
+
+    # OUTER PLANETS MOD
+    "opm_sarnus": Body(5_300_000, 28_500, 8.2089702e13, 580_000, 2.7401267e9),
+    "opm_hale": Body(6_000, 23_555.314, 8.1199062e5, 1_000, 41_000),
+    "opm_ovok": Body(26_000, 29_440.147, 1.3258591e7, 2_000, 94_000),
+    "opm_eeloo": Body(210_000, 57_914.784, 7.4410815e10, 5_000, 1_159_066.2),
+    "opm_slate": Body(54_000, 192_771.15, 1.9788564e12, 10_000, 9_597_157.6),
+    "opm_tekto": Body(280_000, 666_154.48, 1.9244099e11, 95_000, 8_637_005.2),
+
+    "opm_urlum": Body(2_177_000, 41_000, 1.1944574e13, 325_000, 2.5622607e9),
+    "opm_polta": Body(220_000, 73_017.111, 9.0181953e10, 5_000, 1_661_114.9),
+    "opm_priax": Body(74_000, 73_017.111, 3.3831766e9, 5_000, 446_767.6),
+    "opm_wal": Body(370_000, 1_009_410.8, 4.9673624e11, 10_000, 18_933_505),
+    "opm_tal": Body(22_000, 48_874.483, 2.1358884e8, 2_000, 139_966.65),
+
+    "opm_neidon": Body(2_145_000, 40_250, 1.4167882e13, 260_000, 4.4157238e9),
+    "opm_thatmo": Body(286_000, 306_442.67, 1.8609758e11, 35_000, 4_709_379.1),
+    "opm_nissee": Body(30_000, 27_924.872, 3.9716933e8, 5_000, 7_366_476.6),
+
+    "opm_plock": Body(189_000, 106_309.61, 5.1844895e10, 5_000, 3.1276234e8),
+    "opm_karen": Body(85_050, 106_327.76, 4.6818042e9, 2_500, 939_354.32)
 }
 
 
 @dataclass
 class Scanner:
+    """Dataclass to hold scanner properties relevant to scan completion"""
     fov: float
     altitude_min: float
     altitude_best: float
     altitude_max: float
 
 
+# scanners included in SCANSat (accurate as of v20.4)
+SCANNERS = {
+    "ms-1": Scanner(3, 20_000, 70_000, 250_000),        # Biome, VisLo
+    "ms-2a": Scanner(4, 100_000, 500_000, 750_000),     # Biome, VisLo, ResLo
+    "ms-r": Scanner(1.5, 70_000, 300_000, 400_000),     # Biome, VisLo, ResLo
+    "r-3b": Scanner(1.5, 5_000, 70_000, 250_000),       # AltLo
+    "r-eo-1": Scanner(3.5, 50_000, 100_000, 500_000),   # AltLo
+    "sar-c": Scanner(3, 500_000, 700_000, 750_000),     # AltHi
+    "sar-l": Scanner(4, 250_000, 500_000, 1_000_000),   # AltHi, Biome
+    "sar-x": Scanner(1.5, 70_000, 250_000, 500_000),    # AltHi
+    "scan-r": Scanner(1, 20_000, 70_000, 250_000),      # ResHi
+    "scan-r2": Scanner(2.5, 70_000, 250_000, 500_000),  # ResHi
+    "scan-rx": Scanner(3, 100_000, 500_000, 750_000),   # ResHi
+    "vs-1": Scanner(1.5, 20_000, 70_000, 250_000),      # VisHi
+    "vs-11": Scanner(4, 100_000, 200_000, 1_000_000),   # Anom, VisHi
+    "vs-3": Scanner(2.5, 70_000, 350_000, 500_000)      # Anom, VisHi
+}
+
+
 @dataclass
 class SolutionParams:
+    """Dataclass to handle parameters for found solutions"""
     p: int
     q: int
     e_min: float
     e_max: float
 
+
+# CONSTANTS USED ELSEWHERE
 BOTTOM = 0
 TOP = 1
-
 
 FOV_MAX: float = 20  # fov capped in SCANSat to 20° after scaling
 TOLERANCE: float = 1e-5
@@ -154,6 +204,13 @@ VERBOSE = False
 
 
 def coprimes_of(n: int, start: int = 1, end: int = inf) -> Iterator[int]:
+    """
+    creates a generator to produce co-primes of n.
+    :param n: The number output must be co-prime to
+    :param start: The value to start at
+    :param end: Maximum value to test, end after
+    :return: A lazy valued iterator that outputs coprimes in range
+    """
     k = start
     while k <= end:
         if gcd(n, k) == 1:
@@ -163,6 +220,13 @@ def coprimes_of(n: int, start: int = 1, end: int = inf) -> Iterator[int]:
 
 def get_scaled_fov_and_altitude(scanner: Scanner, body: Body)\
         -> tuple[float, float]:
+    """
+    Find the maximum fov the scanner will achieve in orbit. if this exceeds
+    FOV_MAX the 'ideal' altitude will be lowered until they match.
+    :param scanner: The scanner being used
+    :param body: The body being orbited
+    :return: the fov and altitude it will be achieved at
+    """
     fov = scanner.fov
     alt = scanner.altitude_best
 
@@ -254,6 +318,7 @@ def find_root_between(fx: Callable[[float], float], x0: float, x1: float)\
     if VERBOSE and y0*y1 > 0:
         print("WARN: no guaranteed root between x0 and x1.")
 
+    # bisect space until near root
     while abs(x0 - x1) > TOLERANCE:
         x = (x0 + x1) / 2
         y = fx(x)
@@ -278,27 +343,42 @@ def find_limit(fxy: Callable[[float, float], float],
                df_dx: Callable[[float, float], float],
                df_dy: Callable[[float, float], float],
                side: int) -> Optional[float]:
+    """
+    Find the root with the largest y value that can be reached from the passed
+    side of the domain (BOTTOM -> y = 0, TOP -> y = 1) and return its y value.
+    If there are continuous roots between, None is returned instead.
+    :param fxy: The function to find roots in
+    :param df_dx: dirivative in x direction
+    :param df_dy: derivative in y direction
+    :param side: side of plot to start on (BOTTOM: 0 or TOP: 1)
+    :return: the y value of the root reached, or None if continuum
+    """
     sign = 1 - 2*side  # 1 if bottom, -1 if top
 
+    # set initial values, stats bottom right (0,1) or top left (1,0)
     x = 1 - side
     x0, x1 = x, 1-x
     y = side
-    if fxy(x, y) > 0:
+
+    if fxy(x, y) > 0:  # no root to start from on y axis, try x axis
         y = side
         x = find_root_near(lambda _x: fxy(_x, y),
                            lambda _x: df_dx(_x, y), 1-side, -sign)
         if x is None:  # positive and no root in x -> y is valid
             return y
         x0 = x
-    else:
+    else:  # find starting root on y axis
         y = find_root_between(lambda _y: fxy(x, _y), side, 1 - side)
 
         dx = sign * df_dx(x, y)
         if dx < 0:   # implies down slope leaves domain, must be max
             return y
 
+    # repeat until root within tolerance
     while abs(x0 - x1) > TOLERANCE:
+        # decides which side of curve current root is at
         dx = sign * df_dx(x, y)
+        # find root on opposing side of curve
         if dx > 0:
             x0 = x
             x1 = find_root_between(lambda _x: fxy(_x, y), x0, x1)
@@ -306,19 +386,25 @@ def find_limit(fxy: Callable[[float, float], float],
             x1 = x
             x0 = find_root_between(lambda _x: fxy(_x, y), x1, x0)
 
+        # bisect found roots
         x = (x0 + x1) / 2
         z = fxy(x, y)
+        # move y to new root
         y = find_root_near(lambda _y: fxy(x, _y),
                            lambda _y: df_dy(x, _y),
                            y,
                            sign if z < 0 else -sign)
 
-        if y is None:  # no roots at this y value or error
+        if y is None:  # no roots at this x value or error
             return None
     return y
 
 
 class Solver:
+    """
+    Class for containing solution equations and constants. Manages a single
+    scanner - body pair
+    """
     def __init__(self, scanner: Scanner, body: Body):
         self.__scanner: Scanner = scanner
         self.__body: Body = body
@@ -431,22 +517,34 @@ class Solver:
 
     def check_free_track(self, p: int, q: int)\
             -> Optional[tuple[float, float]]:
+        """
+        Checks if the original inequality with variable track width has valid y
+        solutions with p & q
+        :param p: the p value to test - co-prime to q
+        :param q: the q value to test - co-prime to p
+        :return: the found eccentricity limits, if any
+        """
         a = self.__body.get_sma(p, q)
         if a < self.min_sma:
             return None
 
+        # find the lower limit on eccentricity by increasing from bottom
         e_min = find_limit(lambda x, y: self._inequality_value(p, q, x, y),
                            lambda x, y: self._inequality_d_dx(p, q, x, y),
                            lambda x, y: self._inequality_d_dy(p, q, x, y),
                            BOTTOM)
 
+        # none only returned if continuous < 0 from top to bottom: no solutions
         if e_min is None:
             return None
 
+        # find the upper limit on eccentricity by descending from top
         e_max = find_limit(lambda x, y: self._inequality_value(p, q, x, y),
                            lambda x, y: self._inequality_d_dx(p, q, x, y),
                            lambda x, y: self._inequality_d_dy(p, q, x, y),
                            TOP)
+
+        # max < min means no continuous band
         if e_max is None or e_max < e_min:
             return None
 
@@ -454,29 +552,50 @@ class Solver:
 
     def check_fixed_track(self, p: int, q: int)\
             -> Optional[tuple[float, float]]:
+        """
+        Solve variant equation with fixed track width. Will only be smaller
+        than original above best altitude so validates solution in that
+        domain.
+        :param p: the p value to test - co-prime to q
+        :param q: the q value to test - co-prime to p
+        :return: the found eccentricity limits, if any
+        """
         a = self.__body.get_sma(p, q)
         if a < self.min_sma:
             return None
 
+        # find the lower limit on eccentricity by increasing from bottom
         e_min = find_limit(lambda x, y: self._fixed_track_value(p, q, x, y),
                            lambda x, y: self._fixed_track_d_dx(p, q, x, y),
                            lambda x, y: self._fixed_track_d_dy(p, q, x, y),
                            BOTTOM)
 
+        # none only returned if continuous < 0 from top to bottom: no solutions
         if e_min is None:
             return None
 
+        # find the upper limit on eccentricity by descending from top
         e_max = find_limit(lambda x, y: self._fixed_track_value(p, q, x, y),
                            lambda x, y: self._fixed_track_d_dx(p, q, x, y),
                            lambda x, y: self._fixed_track_d_dy(p, q, x, y),
                            TOP)
 
+        # max < min means no continuous band
         if e_max is None or e_max < e_min:
             return None
 
         return e_min, e_max
 
     def get_hard_limit(self, p: int, q: int) -> Optional[tuple[float, float]]:
+        """
+        Checks for hard limits on eccentricity with current sma.
+        These are:
+         - required altitude over poles for scanning,
+         - minimum altitude at periapsis to stay safe
+         - maximum altitude at apoapsis to stay within scanning range and SOI
+        :return: the calculated hard limits on eccentricity, or None if they
+        cannot be met
+        """
         body = self.__body
         scanner = self.__scanner
 
@@ -486,76 +605,182 @@ class Solver:
         if a > body.soi_radius or a > (scanner.altitude_max + r):
             return None
 
+        # altitude at periapsis
         e_safe = 1 - (r + body.safe_altitude) / a
+        # altitude over poles above min altitude
         e_pole = sqrt(1 - (r + scanner.altitude_min) / a)
+        # apoapsis within max altitude
         e_apo = (r + scanner.altitude_max) / a - 1
+        # apoapsis within SOI
         e_soi = body.soi_radius / a - 1
 
         return 0, min(e_safe, e_pole, e_apo, e_soi)
 
+    def get_validation_limits(self, p: int, q: int)\
+            -> Optional[tuple[float, float]]:
+        """
+        get the resulting eccentricity limits from hard limits and fixed track
+        """
+        e_hard = self.get_hard_limit(p, q)
+        if e_hard is None:
+            return None
 
-def find_fastest(body: Body, *scanners: Scanner):
+        e_limits = self.check_fixed_track(p, q)
+        if e_limits is None:
+            return None
+
+        return max(e_hard[0], e_limits[0]), min(e_hard[1], e_limits[1])
+
+
+def check_free_track(p: int, q: int, solvers: list[Solver])\
+        -> Optional[tuple[float, float]]:
+    """
+    See if this is a valid solution for all solvers. return the eccentricity
+    bounds
+    """
+    e_min, e_max = 0, 1
+    # check solvers for limits
+    for solver in solvers:
+        e_limits = solver.check_free_track(p, q)
+        if e_limits is None:  # solver has no solutions here
+            return None
+        e_min = max(e_limits[0], e_min)
+        e_max = min(e_limits[1], e_max)
+        if e_min > e_max:  # this solution not compatible with others
+            return None
+    return e_min, e_max
+
+
+def validate_solution(solution: SolutionParams, solvers: list[Solver])\
+        -> Optional[SolutionParams]:
+    """
+    validate the solution by applying further eccentricity limits from
+    fixed track calculations or hard limits. return the updated solution, or
+    None if it no longer works
+    """
+    e_min, e_max = solution.e_min, solution.e_max
+    p, q = solution.p, solution.q
+
+    for solver in solvers:
+        e_limits = solver.get_validation_limits(p, q)
+        if e_limits is None:
+            return None
+        e_min = max(e_min, e_limits[0])
+        e_max = min(e_max, e_limits[1])
+
+        if e_min > e_max:
+            return None
+
+    solution.e_min = e_min
+    solution.e_max = e_max
+
+    return solution
+
+
+def find_fastest(body: Body, *scanners: Scanner)\
+        -> Optional[list[SolutionParams]]:
+    """
+    Find the family of orbits that will complete the scan within the shortest
+    period of time according to the equations set out in the header.
+
+    Multiple orbits may be returned with slightly different parameters. These
+    are all expected to complete in roughly the same amount of time equal to
+    pT.
+    (period = pT/q, q orbits required to complete scan, (pT/q) * q = pT)
+    :param body: The body being orbited
+    :param scanners: The scanners present on the vessel
+    :return: all found orbits that complete the scan in the shortest time
+    period
+    """
     solvers = [Solver(scanner, body) for scanner in scanners]
 
+    # limit on p - not sound this to be reached in practice, but better safe
+    # than sorry
     limit = 360
-    if (min_fov := min(solver.fov for solver in solvers)) < 1:
-        limit = ceil(limit / min_fov)
+    # if (min_fov := min(solver.fov for solver in solvers)) < 1:
+    #     limit = ceil(limit / min_fov)
 
+    # try all values of p
     for p in range(1, limit+1):
         solutions = []
+        # try all co-primes of p
         for q in coprimes_of(p):
-            failed = False
-            e_min, e_max = 0, 1
-            for solver in solvers:
-                e_limits = solver.check_free_track(p, q)
-                if e_limits is None:
-                    failed = True
-                    break
-                e_min = max(e_limits[0], e_min)
-                e_max = min(e_limits[1], e_max)
-                if e_min > e_max:
-                    failed = True
-                    break
-            if failed:
+            # check for solutions with p/q
+            e_limits = check_free_track(p, q, solvers)
+            if e_limits is None:  # no solutions, increase p
                 break
-            solutions.append(SolutionParams(p, q, e_min, e_max))
-        for i, solution in enumerate(solutions):
-            e_min, e_max = solution.e_min, solution.e_max
-            q = solution.q
-            failed = False
-            for solver in solvers:
-                e_hard = solver.get_hard_limit(p, q)
-                if e_hard is None:
-                    failed = True
-                    break
-                e_min = max(e_min, e_hard[0])
-                e_max = min(e_max, e_hard[1])
+            else:  # solutions found, append and increase q
+                solution = SolutionParams(p, q, e_limits[0], e_limits[1])
+                solutions.append(solution)
 
-                e_limits = solver.check_fixed_track(p, q)
-                if e_limits is None:
-                    failed = True
-                    break
-
-                e_min = max(e_limits[0], e_min)
-                e_max = min(e_limits[1], e_max)
-                if e_min > e_max:
-                    failed = True
-                    break
-
-            if failed:
-                solutions[i] = None
-            else:
-                solution.e_min, solution.e_max = e_min, e_max
+        solutions = [validate_solution(s, solvers) for s in solutions]
         solutions = [s for s in solutions if s is not None]
         if solutions:
             return solutions
+    return None
+
+
+def get_user_input() -> tuple[Body, list[Scanner]]:
+    CUSTOM = "custom"
+    body_name = input(f"body [name|'{CUSTOM}']: ").lower()
+    body = None
+    if body_name == CUSTOM:
+        r = float(input("\tradius [m]: "))
+        t = float(input("\tperiod [s]: "))
+        mu = float(input("\tmu [m3/s2]: "))
+        a = float(input("\tsafe altitude [m]: "))
+        soi = float(input("\tsoi radius [m]: "))
+        body = Body(r, t, mu, a, soi)
+    else:
+        body = BODIES[body_name]
+
+    scanner_names = input(f"scanners [name|'{CUSTOM}'](space-separated): ")\
+        .lower()
+    scanner_names = scanner_names.split(" ")
+    scanners = []
+    custom_n = 1
+    for name in scanner_names:
+        if name == CUSTOM:
+            print(f"--custom scanner {custom_n}--")
+            custom_n += 1
+            f = float(input("\tfov [deg]: "))
+            mn = float(input("\tmin altitude [m]: "))
+            b = float(input("\tbest altitude [m]: "))
+            mx = float(input("\tmax altitude [m]: "))
+            scanners.append(Scanner(f, mn, b, mx))
+        else:
+            scanners.append(SCANNERS[name])
+    return body, scanners
 
 
 def main():
-    scanner = Scanner(4, 250_000, 500_000, 1_000_000)
-    solutions = find_fastest(BODIES["minmus"], scanner)
+    body, scanners = get_user_input()
 
-    print(*solutions, sep='\n')
+    min_alt, max_alt = 0, inf
+    for scanner in scanners:
+        if scanner.altitude_min + body.radius > body.soi_radius:
+            print("Scanner requires altitude outside SOI")
+            return
+        if scanner.altitude_max < body.safe_altitude:
+            print("Scanner cannot operate above minimum safe altitude")
+            return
+        if scanner.altitude_max < min_alt or scanner.altitude_min > max_alt:
+            print("Scanner altitude bands do not overlap!")
+            return
+        min_alt = max(min_alt, scanner.altitude_min)
+        max_alt = min(max_alt, scanner.altitude_max)
+
+    solutions = find_fastest(body, *scanners)
+    if solutions is None:
+        print("No solutions found. Should not happen.")
+    else:
+        for solution in solutions:
+            p, q = solution.p, solution.q
+            e_min, e_max = solution.e_min, solution.e_max
+            a = body.get_sma(p, q)
+
+            print(f"({p:3}/{q:3})\t\ta = {a:.3f}m\t\t"
+                  f"e = {e_min:.5f} to {e_max:.5f}")
 
 
 if __name__ == "__main__":
