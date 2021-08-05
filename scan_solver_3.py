@@ -38,18 +38,18 @@ rotation period of the body being orbited, and checking for eccentricity values
 
                                      where
 
-                  S = sqrt(1 + (p/q)^2 (1-e^2)^3 / (1-ex)^4)
+                    S = 1/x + p/q (1-e^2)^(3/2) / (1-ex)^2
 
-   is the ratio of the angular speed relative the the surface to the orbital
-                                angular speed,
+is the apparent increase in fov due to latitude, and the increase in fov due to
+    the planet's rotation as the satellite passes over (2pi/T / dTheta/dt)
 
                          F = f(a(1-e^2)/(1-ex) - R)/A
 
              is the field of view at each point in the orbit, and
 
-                                 M = 180 x / q
+                                  M = 180 / q
 
-                is the required field of view at each latitude.
+                 is the required field of view for each track.                 
 
                         'e' is the orbital eccentricity
                  'x' is cos of the latitude the orbit is over
@@ -421,17 +421,15 @@ class Solver:
 
     def _s(self, p: float, q: float, x: float, y: float) -> float:
         """S component of inequality (some rearrangement done)"""
-        return sqrt(q**2 * (1-x*y)**4 + p**2 * (1-y*y)**3)
+        return q * (1-x*y)**2 + p*x*(1-y*y)**(3/2)
 
     def _ds_dx(self, p: int, q: int, x: float, y: float) -> float:
         """partial derivative of S with respect to x"""
-        s = self._s(p, q, x, y)
-        return -2 * (q**2 * y * (1-x*y)**3) / s
+        return p*(1-y*y)**(3/2) - 2*q*y*(1-x*y)
 
     def _ds_dy(self, p: int, q: int, x: float, y: float):
         """partial derivative of S with respect to y"""
-        s = self._s(p, q, x, y)
-        return -(2 * q**2 * x * (1-x*y)**3 + 3 * p**2 * y * (1-y*y)**2) / s
+        return -3*p*x*y*(1-y**2)**(1/2) - 2*q*x*(1-y*x)
 
     def _f(self, p: int, q: int, x: float, y: float) -> float:
         """F component of inequality (some rearrangement done)"""
