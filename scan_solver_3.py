@@ -118,7 +118,7 @@ BODIES = {
 
     "kerbin": Body(600_000, 21_549.425, 3.5316e12, 70_000, 84_159_286),
     "mun": Body(200_000, 138_984.38, 6.5138398e10, 10_000, 2_429_559.1),
-    "minmus": Body(60_000, 40_400, 1.7658e9, 10_000, 2_247_428.4),
+    "minmus": Body(60_000, 40_400, 1.7658e9, 5_000, 2_247_428.4),
 
     "duna": Body(320_000, 65_517.859, 3.0136321e11, 50_000, 47_921_949),
     "ike": Body(130_000, 65_517.862, 1.8568369e10, 10_000, 1_049_598.9),
@@ -274,7 +274,7 @@ def find_root_near(fx: Callable[[float], float],
 
         y = fx(x)
         dy = df_dx(x)
-        r = y/dy
+        r = y/dy if dy != 0 else 2*TOLERANCE
 
         # limit distance moved
         if abs(r) > max_dx:
@@ -780,6 +780,87 @@ def main():
             print(f"({p:3}/{q:3})\t\ta = {a:.3f}m\t\t"
                   f"e = {e_min:.5f} to {e_max:.5f}")
 
+def validate_fixed(solvers, solution):
+    for solver in solvers:
+        e_limits = solver.check_fixed_track(solution.p, solution.q)
+        if e_limits is None:
+            return None
+        solution.e_min = max(solution.e_min, e_limits[0])
+        solution.e_max = min(solution.e_max, e_limits[1])
+    return solution
+
+def validate_hard(solvers, solution):
+    for solver in solvers:
+        e_limits = solver.get_hard_limit(solution.p, solution.q)
+        if e_limits is None:
+            return None
+        solution.e_min = max(solution.e_min, e_limits[0])
+        solution.e_max = min(solution.e_max, e_limits[1])
+        if solution.e_min > solution.e_max:
+            return None
+    return solution
+
+def find_fastest2(body: Body, scanner: Scanner)\
+        -> Optional[list[SolutionParams]]:
+    solvers = [Solver(scanner, body)]
+
+    limit = 360
+    q_start = 1
+    for p in range(1, limit+1):
+        solutions = []
+        # try all co-primes of p
+        for q in coprimes_of(p, start=q_start):
+            # check for solutions with p/q
+            e_limits = check_free_track(p, q, solvers)
+            if e_limits is None:  # no solutions, increase p
+                break
+            else:  # solutions found, append and increase q
+                solution = SolutionParams(p, q, e_limits[0], e_limits[1])
+                solutions.append(solution)
+
+        solutions.sort(key=lambda s: s.q, reverse=True)
+        valid = []
+        q_err = q_start
+        for solution in solutions:
+            q = solution.q
+            e_max = solution.e_max
+            solution = validate_fixed(solvers, solution)
+            if solution is None:
+                if q > q_err:
+                    q = q - 4/(1-e_max)
+                    q_err = max(coprimes_of(p+1, 1, max(q, 1)))
+                continue
+            solution = validate_hard(solvers, solution)
+            if solution is None:
+                continue
+            valid.append(solution)
+        q_start = q_err
+        if len(valid) > 0:
+            return valid
+
+    return None
+
+def compare_results(body, scanners):
+    solutions = find_fastest(body, scanners)
+    solutions2 = find_fastest2(body, scanners)
+
+    return solutions, solutions2
+
+def test_all():
+    for s_name, scanner in SCANNERS.items():
+        for b_name, body in BODIES.items():
+            if scanner.altitude_min + body.radius > body.soi_radius:
+                continue
+            if scanner.altitude_max < body.safe_altitude:
+                continue
+            s1, s2 = compare_results(body, scanner)
+            res = len(s1) == len(s2) and all(s in s1 for s in s2)
+            if not res:
+                print("\33[0;49;91m", end='')
+            print(f"{s_name}:{b_name} - {res}", end='')
+            print("\33[0m")
+
 
 if __name__ == "__main__":
-    main()
+    # main()
+    test_all()
