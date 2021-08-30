@@ -79,8 +79,8 @@ function main {
     set row to row + 3.
     print "Input Minimum Safe Altitude: (meters)" at (0, row).
     local alt_safe is input(0, row+1).
-    until alt_safe:matchesPattern("^\d+$") {
-        print "Int expected.":padRight(terminal:width) at (0, row+1).
+    until alt_safe:toNumber(-1) >= 0 {
+        print "Positive number expected":padRight(terminal:width) at (0, row+1).
         wait until terminal:input:getchar() = terminal:input:enter.
         set alt_safe to input(0, row+1).
     }
@@ -104,11 +104,14 @@ function main {
         scannerList:add(SCANNERS[name]).
     }
 
+    local old_ipu is config:ipu.
+    set config:ipu to 2000.
     set row to row + 3.
     print "Working...":padright(terminal:width) at (0, row).
     local t is time.
     local solutions is findFastestOrbits(target_body, alt_safe, scannerList, "Working... ":length, row).
     set t to time - t.
+    set config:ipu to old_ipu.
 
     print BEEP.
     print ("completed calculation in " + round(t:seconds, 1) + " seconds"):padright(terminal:width) at (0, row+2).

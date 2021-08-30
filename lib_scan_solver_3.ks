@@ -124,6 +124,7 @@ function NewEquationHolder {
 
     return lex(
         "body", target_body,
+        "body_radius", target_body:radius,
         "scanner", scanner,
         "sma_min", sma_min,
         "sma_max", sma_max,
@@ -141,55 +142,55 @@ function NewEquationHolder {
 
 // S component of inequality (some rearrangement done)
 function EH_Surface {
-    parameter self, p, q, x, y.
-    return q*(1 - x*y)^2 + p*x*(1 - y^2)^(3/2).
+    parameter p, q, x, y.
+    return q*(1 - x*y)^2 + p*x*(1 - y^2)^(1.5).
 }
 
 // partial derivative of S with respect to x
 function EH_SurfaceDx {
-    parameter self, p, q, x, y.
-    return p*(1 - y^2)^(3/2) - 2*q*y*(1 - x*y).
+    parameter p, q, x, y.
+    return p*(1 - y^2)^(1.5) - 2*q*y*(1 - x*y).
 }
 
 // partial derivative of S with respect to y
 function EH_SurfaceDy {
-    parameter self, p, q, x, y.
-    return -3*p*x*y*(1 - y^2)^(1/2) - 2*q*x*(1 - y*x).
+    parameter p, q, x, y.
+    return -3*p*x*y*sqrt(1 - y^2) - 2*q*x*(1 - y*x).
 }
 
 // F component of inequality (some rearrangement done)
 function EH_Fov {
     parameter self, p, q, x, y.
-    return (1 - y^2)*self:getSma(p, q) - (1 - x*y)*self:body:radius.
+    return (1 - y^2)*self:getSma(p, q) - (1 - x*y)*self:body_radius.
 }
 
 // partial derivative of F with respect to x
 function EH_FovDx {
-    parameter self, p, q, x, y.
-    return self:body:radius*y.
+    parameter self, y.
+    return self:body_radius*y.
 }
 
 // partial derivative of F with respect to y
 function EH_FovDy {
     parameter self, p, q, x, y.
-    return x*self:body:radius - 2*y*self:getSma(p, q).
+    return x*self:body_radius - 2*y*self:getSma(p, q).
 }
 
 // M component of inequality (some rearrangement done)
 function EH_Min {
-    parameter self, p, q, x, y.
+    parameter self, x, y.
     return self:k*x*(1 - x*y)^3.
 }
 
 // partial derivative of M with respect to x
 function EH_MinDx {
-    parameter self, p, q, x, y.
+    parameter self, x, y.
     return self:k*(1 - 4*x*y) * (1 - x*y)^2.
 }
 
 // partial derivative of M with respect to y
 function EH_MinDy {
-    parameter self, p, q, x, y.
+    parameter self, x, y.
     return -3 * self:k * x^2 * (1 - x*y)^2.
 }
 
@@ -197,9 +198,9 @@ function EH_MinDy {
 function EH_FreeTrack {
     parameter self, p, q, x, y.
 
-    local s is EH_Surface(self, p, q, x, y).
+    local s is EH_Surface(p, q, x, y).
     local f is EH_Fov(self, p, q, x, y).
-    local m is EH_Min(self, p, q, x, y).
+    local m is EH_Min(self, x, y).
 
     return s * f - m.
 }
@@ -207,13 +208,13 @@ function EH_FreeTrack {
 // gradient of inequality in x direction
 function EH_FreeTrackDx {
     parameter self, p, q, x, y.
-    local s is EH_Surface(self, p, q, x, y).
-    local ds_dx is EH_SurfaceDx(self, p, q, x, y).
+    local s is EH_Surface(p, q, x, y).
+    local ds_dx is EH_SurfaceDx(p, q, x, y).
 
     local f is EH_Fov(self, p, q, x, y).
-    local df_dx is EH_FovDx(self, p, q, x, y).
+    local df_dx is EH_FovDx(self, y).
 
-    local dm_dx is EH_MinDx(self, p, q, x, y).
+    local dm_dx is EH_MinDx(self, x, y).
 
     return s * df_dx + f * ds_dx - dm_dx.
 }
@@ -221,13 +222,13 @@ function EH_FreeTrackDx {
 // gradient of inequality in y direction
 function EH_FreeTrackDy {
     parameter self, p, q, x, y.
-    local s is EH_Surface(self, p, q, x, y).
-    local ds_dy is EH_SurfaceDy(self, p, q, x, y).
+    local s is EH_Surface(p, q, x, y).
+    local ds_dy is EH_SurfaceDy(p, q, x, y).
 
     local f is EH_Fov(self, p, q, x, y).
     local df_dy is EH_FovDy(self, p, q, x, y).
 
-    local dm_dy is EH_MinDy(self, p, q, x, y).
+    local dm_dy is EH_MinDy(self, x, y).
 
     return s * df_dy + f * ds_dy - dm_dy.
 }
@@ -236,7 +237,7 @@ function EH_FreeTrackDy {
 // 'best altitude' of scanner as other inequality will over scale.
 function EH_FixedTrack {
     parameter self, p, q, x, y.
-    local s is EH_Surface(self, p, q, x, y).
+    local s is EH_Surface(p, q, x, y).
     local m is self:k_fixed * x * (1 - x*y)^2.  // no altitude scaling
     return s - m.
 }
@@ -244,7 +245,7 @@ function EH_FixedTrack {
 // x gradient of alternative inequality
 function EH_FixedTrackDx {
     parameter self, p, q, x, y.
-    local ds_dx is EH_SurfaceDx(self, p, q, x, y).
+    local ds_dx is EH_SurfaceDx(p, q, x, y).
     local dm_dx is self:k_fixed * (1 - x*y) * (1 - 3*x*y).
 
     return ds_dx - dm_dx.
@@ -253,7 +254,7 @@ function EH_FixedTrackDx {
 // y gradient of alternative inequality
 function EH_FixedTrackDy {
     parameter self, p, q, x, y.
-    local ds_dy is EH_SurfaceDy(self, p, q, x, y).
+    local ds_dy is EH_SurfaceDy(p, q, x, y).
     local dm_dy is -2 * self:k_fixed * x^2 * (1 - x*y).
 
     return ds_dy - dm_dy.
@@ -306,7 +307,7 @@ function EH_ApplyFixedTrackLimits {
 
     local p is solution:p.
     local q is solution:q.
-    if solution:sma*(solution:e_min + 1) > self:alt_best + self:body:radius {
+    if solution:sma*(solution:e_min + 1) > self:alt_best + self:body_radius {
         // find the lower limit on eccentricity by increasing from bottom
         local e_min is FindLimit(
             {parameter x, y. return EH_FixedTrack(self, p, q, x, y).},
@@ -322,7 +323,7 @@ function EH_ApplyFixedTrackLimits {
         set solution:e_min to max(solution:e_min, e_min).
     }
 
-    if solution:sma*(solution:e_max + 1) > self:alt_best + self:body:radius {
+    if solution:sma*(solution:e_max + 1) > self:alt_best + self:body_radius {
         // find the upper limit on eccentricity by descending from top
         local e_max is FindLimit(
             {parameter x, y. return EH_FixedTrack(self, p, q, x, y).},
@@ -352,7 +353,7 @@ function EH_ApplyHardLimits {
     parameter self, solution.
 
     local a is solution:sma.
-    local r is self:body:radius.
+    local r is self:body_radius.
     
     // altitude over poles above min altitude
     local e_pole is sqrt(1 - (r + self:scanner:alt_min) / a).
@@ -591,7 +592,7 @@ function freeTrackLimits {
     local e_min is 0.
     local e_max is 1.
     for eq in eq_holders {
-        if eq:alt_best > eq:sma_min - eq:body:radius {
+        if eq:alt_best > eq:sma_min - eq:body_radius {
             local e_lims is EH_FreeTrackLimits(eq, p, q).
             if e_lims = NONE {
                 return NONE.
@@ -620,7 +621,7 @@ function applyFixedTrackLimits {
 function applyHardLimits {
     parameter eq_holders, solution.
     // altitude at periapsis
-    local r is eq_holders[0]:body:radius.
+    local r is eq_holders[0]:body_radius.
     local e_safe is 1 - (r + eq_holders[0]:alt_safe) / solution:sma.
     // apoapsis within SOI
     local e_soi is eq_holders[0]:body:soiRadius / solution:sma - 1.
