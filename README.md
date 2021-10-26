@@ -42,12 +42,12 @@ The program finds limits on `e` for a given `p` and `q` that have solutions for 
 ```
 2f * S * F > 360 (deg) / q
 ```
-where `f` is the FoV at `A0`.
-`360/q` is the 
+where `f` is the FoV at `A0`.\
+`360/q` is the minimum FoV required to complete each ground track.
 
 The inequality will typically look something like this
 
-![plot of inequality](https://imgur.com/TRCEQKX)
+![plot of inequality](https://imgur.com/7nn3UMI.png)
 
 where `cos v` is shown on the x axis and `e` is shown on the y axis. The program is trying to find continuous horizontal bands and return the minimum and maximum values of `e` that form them.
 
