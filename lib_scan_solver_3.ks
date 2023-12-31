@@ -24,7 +24,7 @@
 // 
 //  This program is designed to find the most efficient (time-wise) orbit for 
 //  completing a surface scan with SCAN Sat. This is done by searching orbits 
-//   with a period p/q * T, where 'p/q' is a reduced fraction and 'T' is the  
+//   with a period rp/rq * T, where 'rp/rq' is a reduced fraction and 'T' is the  
 //     sidereal rotation period of the body being orbited, and checking for    
 //     eccentricity values that provide complete coverage at all latitudes.    
 // 
@@ -35,23 +35,23 @@
 // 
 //                                    where                                   
 // 
-//                    S = 1/x + p/q (1-e^2)^(3/2) / (1-ex)^2                   
+//                    S = 1/x + rp/rq (1-e^2)^(3/2) / (1-ex)^2                   
 // 
 // is the apparent increase in fov due to latitude, and the increase in fov due
 //  to the planet's rotation as the satellite passes over (2pi/T / dTheta/dt) 
 // 
-//                         F = f(a(1-e^2)/(1-ex) - R)/A                        
+//                         F = f(a(1-e^2)/(1-ex) - rr)/A                        
 // 
 //             is the field of view at each point in the orbit, and            
 // 
-//                                 M = 180 / q                                
+//                                 M = 180 / rq                                
 // 
 //                is the required field of view for each track.                
 // 
 //                       'e' is the orbital eccentricity                      
 //                 'x' is cos of the latitude the orbit is over                
 //          'f' is the base field of view of the scanner (in degrees)         
-//       'a' is the semi-major axis = cube_root((p/q)^2 μ T^2 / (4 π^2))      
+//       'a' is the semi-major axis = cube_root((rp/rq)^2 μ T^2 / (4 π^2))      
 //        'μ' is the standard gravitational parameter for the body = G*m       
 //                  'A' is the "best altitude" of the scanner                 
 // 
@@ -60,7 +60,7 @@
 //   in this way for consistency, but it is important to know when trying to  
 //                    understand the function of each part.                   
 // 
-//       Version 1 solved circular orbits by checking that q * fov >= 180      
+//       Version 1 solved circular orbits by checking that rq * fov >= 180      
 //                Version 2 solved F >= M for elliptical orbits               
 // 
 // The surface component, S, added for v3.0 improves the scan times that can be
@@ -94,11 +94,11 @@ function NewScanner {
 
 // Create a new solutions params structure. Dataclass for organisation.
 function NewSolutionParams {
-    parameter p, q, sma, e_min, e_max.
+    parameter rp, rq, sma, e_min, e_max.
 
     return lex(
-        "p", p, 
-        "q", q, 
+        "rp", rp, 
+        "rq", rq, 
         "sma", sma, 
         "e_min", e_min, 
         "e_max", e_max
@@ -134,7 +134,7 @@ function NewEquationHolder {
         "k", k,
         "k_fixed", k_fixed,
         "sma_sync", sma_sync,
-        "getSma", {parameter p, q. return sma_sync * (p/q)^(2/3).}
+        "getSma", {parameter rp, rq. return sma_sync * (rp/rq)^(2/3).}
     ).
 }
 
@@ -142,26 +142,26 @@ function NewEquationHolder {
 
 // S component of inequality (some rearrangement done)
 function EH_Surface {
-    parameter p, q, x, y.
-    return q*(1 - x*y)^2 + p*x*(1 - y^2)^(1.5).
+    parameter rp, rq, x, y.
+    return rq*(1 - x*y)^2 + rp*x*(1 - y^2)^(1.5).
 }
 
 // partial derivative of S with respect to x
 function EH_SurfaceDx {
-    parameter p, q, x, y.
-    return p*(1 - y^2)^(1.5) - 2*q*y*(1 - x*y).
+    parameter rp, rq, x, y.
+    return rp*(1 - y^2)^(1.5) - 2*rq*y*(1 - x*y).
 }
 
 // partial derivative of S with respect to y
 function EH_SurfaceDy {
-    parameter p, q, x, y.
-    return -3*p*x*y*sqrt(1 - y^2) - 2*q*x*(1 - y*x).
+    parameter rp, rq, x, y.
+    return -3*rp*x*y*sqrt(1 - y^2) - 2*rq*x*(1 - y*x).
 }
 
 // F component of inequality (some rearrangement done)
 function EH_Fov {
-    parameter self, p, q, x, y.
-    return (1 - y^2)*self:getSma(p, q) - (1 - x*y)*self:body_radius.
+    parameter self, rp, rq, x, y.
+    return (1 - y^2)*self:getSma(rp, rq) - (1 - x*y)*self:body_radius.
 }
 
 // partial derivative of F with respect to x
@@ -172,8 +172,8 @@ function EH_FovDx {
 
 // partial derivative of F with respect to y
 function EH_FovDy {
-    parameter self, p, q, x, y.
-    return x*self:body_radius - 2*y*self:getSma(p, q).
+    parameter self, rp, rq, x, y.
+    return x*self:body_radius - 2*y*self:getSma(rp, rq).
 }
 
 // M component of inequality (some rearrangement done)
@@ -196,10 +196,10 @@ function EH_MinDy {
 
 // Calculates difference between the two sides of the inequality
 function EH_FreeTrack {
-    parameter self, p, q, x, y.
+    parameter self, rp, rq, x, y.
 
-    local s is EH_Surface(p, q, x, y).
-    local f is EH_Fov(self, p, q, x, y).
+    local s is EH_Surface(rp, rq, x, y).
+    local f is EH_Fov(self, rp, rq, x, y).
     local m is EH_Min(self, x, y).
 
     return s * f - m.
@@ -207,11 +207,11 @@ function EH_FreeTrack {
 
 // gradient of inequality in x direction
 function EH_FreeTrackDx {
-    parameter self, p, q, x, y.
-    local s is EH_Surface(p, q, x, y).
-    local ds_dx is EH_SurfaceDx(p, q, x, y).
+    parameter self, rp, rq, x, y.
+    local s is EH_Surface(rp, rq, x, y).
+    local ds_dx is EH_SurfaceDx(rp, rq, x, y).
 
-    local f is EH_Fov(self, p, q, x, y).
+    local f is EH_Fov(self, rp, rq, x, y).
     local df_dx is EH_FovDx(self, y).
 
     local dm_dx is EH_MinDx(self, x, y).
@@ -221,12 +221,12 @@ function EH_FreeTrackDx {
 
 // gradient of inequality in y direction
 function EH_FreeTrackDy {
-    parameter self, p, q, x, y.
-    local s is EH_Surface(p, q, x, y).
-    local ds_dy is EH_SurfaceDy(p, q, x, y).
+    parameter self, rp, rq, x, y.
+    local s is EH_Surface(rp, rq, x, y).
+    local ds_dy is EH_SurfaceDy(rp, rq, x, y).
 
-    local f is EH_Fov(self, p, q, x, y).
-    local df_dy is EH_FovDy(self, p, q, x, y).
+    local f is EH_Fov(self, rp, rq, x, y).
+    local df_dy is EH_FovDy(self, rp, rq, x, y).
 
     local dm_dy is EH_MinDy(self, x, y).
 
@@ -236,16 +236,16 @@ function EH_FreeTrackDy {
 // Variant of inequality with fov fixed at max. Ensures coverage above
 // 'best altitude' of scanner as other inequality will over scale.
 function EH_FixedTrack {
-    parameter self, p, q, x, y.
-    local s is EH_Surface(p, q, x, y).
+    parameter self, rp, rq, x, y.
+    local s is EH_Surface(rp, rq, x, y).
     local m is self:k_fixed * x * (1 - x*y)^2.  // no altitude scaling
     return s - m.
 }
 
 // x gradient of alternative inequality
 function EH_FixedTrackDx {
-    parameter self, p, q, x, y.
-    local ds_dx is EH_SurfaceDx(p, q, x, y).
+    parameter self, rp, rq, x, y.
+    local ds_dx is EH_SurfaceDx(rp, rq, x, y).
     local dm_dx is self:k_fixed * (1 - x*y) * (1 - 3*x*y).
 
     return ds_dx - dm_dx.
@@ -253,25 +253,25 @@ function EH_FixedTrackDx {
 
 // y gradient of alternative inequality
 function EH_FixedTrackDy {
-    parameter self, p, q, x, y.
-    local ds_dy is EH_SurfaceDy(p, q, x, y).
+    parameter self, rp, rq, x, y.
+    local ds_dy is EH_SurfaceDy(rp, rq, x, y).
     local dm_dy is -2 * self:k_fixed * x^2 * (1 - x*y).
 
     return ds_dy - dm_dy.
 }
 
 // Checks if the original inequality with variable track width has valid y
-// solutions with p & q
-// @param p the p value to test - co-prime to q
-// @param q the q value to test - co-prime to p
+// solutions with rp & rq
+// @param rp the rp value to test - co-prime to rq
+// @param rq the rq value to test - co-prime to rp
 // @return the found eccentricity limits, if any
 function EH_FreeTrackLimits {
-    parameter self, p, q.
+    parameter self, rp, rq.
     // find the lower limit on eccentricity by increasing from bottom
     local e_min is FindLimit(
-        {parameter x, y. return EH_FreeTrack(self, p, q, x, y).},
-        {parameter x, y. return EH_FreeTrackDx(self, p, q, x, y).},
-        {parameter x, y. return EH_FreeTrackDy(self, p, q, x, y).},
+        {parameter x, y. return EH_FreeTrack(self, rp, rq, x, y).},
+        {parameter x, y. return EH_FreeTrackDx(self, rp, rq, x, y).},
+        {parameter x, y. return EH_FreeTrackDy(self, rp, rq, x, y).},
         0
     ).
 
@@ -282,9 +282,9 @@ function EH_FreeTrackLimits {
 
     // find the upper limit on eccentricity by descending from top
     local e_max is FindLimit(
-        {parameter x, y. return EH_FreeTrack(self, p, q, x, y).},
-        {parameter x, y. return EH_FreeTrackDx(self, p, q, x, y).},
-        {parameter x, y. return EH_FreeTrackDy(self, p, q, x, y).},
+        {parameter x, y. return EH_FreeTrack(self, rp, rq, x, y).},
+        {parameter x, y. return EH_FreeTrackDx(self, rp, rq, x, y).},
+        {parameter x, y. return EH_FreeTrackDy(self, rp, rq, x, y).},
         1
     ).
 
@@ -305,14 +305,14 @@ function EH_FreeTrackLimits {
 function EH_ApplyFixedTrackLimits {
     parameter self, solution.
 
-    local p is solution:p.
-    local q is solution:q.
+    local rp is solution:rp.
+    local rq is solution:rq.
     if solution:sma*(solution:e_min + 1) > self:alt_best + self:body_radius {
         // find the lower limit on eccentricity by increasing from bottom
         local e_min is FindLimit(
-            {parameter x, y. return EH_FixedTrack(self, p, q, x, y).},
-            {parameter x, y. return EH_FixedTrackDx(self, p, q, x, y).},
-            {parameter x, y. return EH_FixedTrackDy(self, p, q, x, y).},
+            {parameter x, y. return EH_FixedTrack(self, rp, rq, x, y).},
+            {parameter x, y. return EH_FixedTrackDx(self, rp, rq, x, y).},
+            {parameter x, y. return EH_FixedTrackDy(self, rp, rq, x, y).},
             0
         ).
 
@@ -326,9 +326,9 @@ function EH_ApplyFixedTrackLimits {
     if solution:sma*(solution:e_max + 1) > self:alt_best + self:body_radius {
         // find the upper limit on eccentricity by descending from top
         local e_max is FindLimit(
-            {parameter x, y. return EH_FixedTrack(self, p, q, x, y).},
-            {parameter x, y. return EH_FixedTrackDx(self, p, q, x, y).},
-            {parameter x, y. return EH_FixedTrackDy(self, p, q, x, y).},
+            {parameter x, y. return EH_FixedTrack(self, rp, rq, x, y).},
+            {parameter x, y. return EH_FixedTrackDx(self, rp, rq, x, y).},
+            {parameter x, y. return EH_FixedTrackDy(self, rp, rq, x, y).},
             1
         ).
 
@@ -353,12 +353,12 @@ function EH_ApplyHardLimits {
     parameter self, solution.
 
     local a is solution:sma.
-    local r is self:body_radius.
+    local rr is self:body_radius.
     
     // altitude over poles above min altitude
-    local e_pole is sqrt(1 - (r + self:scanner:alt_min) / a).
+    local e_pole is sqrt(1 - (rr + self:scanner:alt_min) / a).
     // apoapsis within max altitude
-    local e_apo is (r + self:scanner:alt_max) / a - 1.
+    local e_apo is (rr + self:scanner:alt_max) / a - 1.
 
     set solution:e_max to min(
         solution:e_max,
@@ -474,17 +474,17 @@ function findRootNear {
             return findRootBetween(fx, x, _x).
         }
 
-        local r is choose y/dy if dy <> 0 else 2*TOLERANCE.
+        local rr is choose y/dy if dy <> 0 else 2*TOLERANCE.
         
-        if abs(r) > MAX_STEP {
-            set r to d * MAX_STEP.
-        } else if r*d < 0 {
-            set r to -r.
+        if abs(rr) > MAX_STEP {
+            set rr to d * MAX_STEP.
+        } else if rr*d < 0 {
+            set rr to -rr.
         }
 
         set _x to x.
 
-        set x to x + r.
+        set x to x + rr.
 
         if x < 0 or x > 1 {
             return NONE.
@@ -587,13 +587,13 @@ function findLimit {
 
 
 function freeTrackLimits {
-    parameter eq_holders, p, q.
+    parameter eq_holders, rp, rq.
 
     local e_min is 0.
     local e_max is 1.
     for eq in eq_holders {
         if eq:alt_best > eq:sma_min - eq:body_radius {
-            local e_lims is EH_FreeTrackLimits(eq, p, q).
+            local e_lims is EH_FreeTrackLimits(eq, rp, rq).
             if e_lims = NONE {
                 return NONE.
             }
@@ -621,8 +621,8 @@ function applyFixedTrackLimits {
 function applyHardLimits {
     parameter eq_holders, solution.
     // altitude at periapsis
-    local r is eq_holders[0]:body_radius.
-    local e_safe is 1 - (r + eq_holders[0]:alt_safe) / solution:sma.
+    local rr is eq_holders[0]:body_radius.
+    local e_safe is 1 - (rr + eq_holders[0]:alt_safe) / solution:sma.
     // apoapsis within SOI
     local e_soi is eq_holders[0]:body:soiRadius / solution:sma - 1.
 
@@ -658,25 +658,25 @@ function findFastestOrbits {
     local r_min is (eq_holders[0]:sma_sync / sma_min) ^ (3/2).
 
     local valid is list().
-    local p is 0.
+    local rp is 0.
     until valid:length > 0 {
-        set p to p+1.
+        set rp to rp+1.
         local solutions is list().
-        local q is ceiling(p*r_max) - 1.
-        local end is floor(p*r_min).
-        until q >= end {
-            set q to q+1.
+        local rq is ceiling(rp*r_max) - 1.
+        local end is floor(rp*r_min).
+        until rq >= end {
+            set rq to rq+1.
             if update_col <> -1 {
-                print ("" + p + "/" + q):padright(terminal:width-update_col) at (update_col, update_row).
+                print ("" + rp + "/" + rq):padright(terminal:width-update_col) at (update_col, update_row).
             }
-            if gcd(p, q) = 1 {
-                local e_limits is freeTrackLimits(eq_holders, p, q).
+            if gcd(rp, rq) = 1 {
+                local e_limits is freeTrackLimits(eq_holders, rp, rq).
                 if e_limits <> NONE {
-                    local a is eq_holders[0]:getSma(p, q).
+                    local a is eq_holders[0]:getSma(rp, rq).
                     solutions:add(
                         NewSolutionParams(
-                            p,
-                            q,
+                            rp,
+                            rq,
                             a,
                             e_limits[0],
                             e_limits[1]
@@ -693,7 +693,7 @@ function findFastestOrbits {
         until not itr:next {
             local solution is itr:value.
             if update_col <> -1 {
-                print ("validating " + solution:p + "/" + solution:q):padright(terminal:width-update_col) at (update_col, update_row).
+                print ("validating " + solution:rp + "/" + solution:rq):padright(terminal:width-update_col) at (update_col, update_row).
             }
             set DEBUG_FLAG to true.
     

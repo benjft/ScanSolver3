@@ -118,13 +118,13 @@ function main {
     
     local strings is list().
     for solution in solutions {
-        local p is "" + solution:p.
-        local q is "" + solution:q.
+        local rp is "" + solution:rp.
+        local rq is "" + solution:rq.
         local e_min is "" + CEILING(solution:e_min, 5).
         local e_max is "" + floor(solution:e_max, 5).
         local a is "" + round(solution:sma, 2).
 
-        local str is "(" + p + "/" + q + ")" + " a=" + a + "m  e=" + e_min +
+        local str is "(" + rp + "/" + rq + ")" + " a=" + a + "m  e=" + e_min +
             " to " + e_max.
         strings:add(str).
     }
@@ -135,7 +135,8 @@ function main {
     return row+4.
 }
 
-
+LOCAL oldIPU IS CONFIG:IPU.
+SET CONFIG:IPU TO 2000. //2000 is the max allowed IPU by the kOS source code
 local _row is main().
 print "start again? (y/n)" at (0, _row+1).
 until input(0, _row+2):startsWith("n") {
@@ -143,3 +144,4 @@ until input(0, _row+2):startsWith("n") {
     print "start again? (y/n)" at (0, _row+1).
 }
 clearScreen.
+SET CONFIG:IPU TO oldIPU.
